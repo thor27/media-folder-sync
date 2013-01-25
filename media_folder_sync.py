@@ -20,6 +20,9 @@ filetypes = [
     },
 ]
 
+# FFmpeg executable name or path
+ffmpeg_exec = 'ffmpeg'
+
 class dbdict(UserDict.DictMixin):
     ''' dbdict, a dictionnary-like class that persists in a sqlite file 
         Thanks to: http://sebsauvage.net/python/snyppets/index.html#dbdict
@@ -78,7 +81,7 @@ def ffmpeg(file_in, file_out, codecs):
     """
     print "converting: %s -> %s" %(file_in,file_out)
     codecs = " ".join(["-%s %s" %(t,c) for t,c in codecs.items()])
-    command = " ".join(["ffmpeg -y","-i '%s'" %file_in,codecs,"'%s'"%file_out])
+    command = " ".join([ffmpeg_exec,"-y","-i '%s'" %file_in,codecs,"'%s'"%file_out])
     with tempfile.TemporaryFile() as tmp:
         exit_code = subprocess.call(command, stderr=tmp, shell=True)
         if exit_code !=0:
@@ -89,9 +92,8 @@ def ffmpeg(file_in, file_out, codecs):
     print "conversion done."
     
 def get_type(extension):
-    """ Return the group of filetypes, defined globally, that extension is
-        part of.
-    """ 
+    """ Return the group of filetypes, defined globally, that extension is part of.
+    """
     for filetype in filetypes:
         if extension in filetype.keys():
             return filetype
@@ -107,7 +109,6 @@ def verify(filepath):
         return
     
     filecheck = filechecks.get(filepath,None)
-    
     if  filecheck == check(filepath):
         return
     
@@ -137,8 +138,28 @@ def verify(filepath):
             continue
         
         filechecks[new_file] = check(new_file)
-        
+
+def get_all_files(folder):
+    """ Returns a generator that lists all files from a specific folder,
+        recursively.
+    """
+    for dirpath, dirname, filenames in os.walk(folder):
+        for filename in filenames:
+            yield os.path.join(dirpath, filename)
+
+def verify_all(folders):
+    """ Calls verify for all files found on all specified folders,
+        and remove all non existant files.
+    """
+    # Add/Update all files
+    for filepath in chain(*map(get_all_files,folders)):
+        verify(filepath)
     
+    #Remove non existant files
+    for filepath in filechecks:
+        if not os.path.exists(filepath):
+            remove_related_files(filepath)
+
 class Process(ProcessEvent):
     """ Process class that is connected to WatchManager.
         Everytime an event happens the specific method
@@ -191,27 +212,6 @@ def monitor_loop(folders):
                 notifier.read_events()
     except KeyboardInterrupt:
         notifier.stop()
-
-def get_all_files(folder):
-    """ Returns a generator that lists all files from a specific folder,
-        recursively.
-    """
-    for dirpath, dirname, filenames in os.walk(folder):
-        for filename in filenames:
-            yield os.path.join(dirpath, filename)
-
-def verify_all(folders):
-    """ Calls verify for all files found on all specified folders,
-        and remove all non existant files.
-    """
-    # Add/Update all files
-    for filepath in chain(*map(get_all_files,folders)):
-        verify(filepath)
-    
-    #Remove non existant files
-    for filepath in filechecks:
-        if not os.path.exists(filepath):
-            remove_related_files(filepath)
 
 def command_line_args():
     """ Deals with command line arguments
