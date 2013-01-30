@@ -1,4 +1,9 @@
-import unittest
+try:
+    import unittest2 as unittest
+    TIMEWAIT=1
+except ImportError:
+    import unittest
+    TIMEWAIT=0.1
 import media_folder_sync as mfs
 import tempfile
 import os, stat
@@ -145,7 +150,7 @@ class mfs_test(unittest.TestCase):
     
     def test_verify(self):
         from time import sleep
-        sleep(0.01) #to get a different mtime on file
+        sleep(TIMEWAIT) #to get a different mtime on file
         with open(self.filenames[2],'w') as f:
             f.write('new data')
         mfs.verify(self.filenames[2])
