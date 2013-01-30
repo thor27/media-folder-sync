@@ -44,7 +44,7 @@ A simple tip on how to get a very complete ffmpeg on Debian:
 apt-get remove --purge ffmpeg 
 
 #This ubuntu mirrors has some codec dev packages, you can also remove it after the apt-get install if you prefer
-echo 'deb http://archive.ubuntu.com/ubuntu natty main restricted universe multiverse' >/etc/apt/source.list.d/ubuntu.list
+echo 'deb http://archive.ubuntu.com/ubuntu natty main restricted universe multiverse' >/etc/apt/sources.list.d/ubuntu.list
 apt-get update
 apt-get install make automake g++ bzip2 python unzip patch subversion ruby build-essential git-core checkinstall yasm texi2html libfaac-dev libmp3lame-dev libopencore-amrnb-dev libopencore-amrwb-dev libsdl1.2-dev libtheora-dev libvdpau-dev libvorbis-dev libvpx-dev libx11-dev libxfixes-dev libxvidcore-dev zlib1g-dev
 
@@ -64,6 +64,7 @@ cd libvpx-v0.9.7-p1
 make
 make install
 cd ..
+ldconfig
 
 git clone git://source.ffmpeg.org/ffmpeg
 cd ffmpeg
@@ -71,6 +72,8 @@ cd ffmpeg
 make
 make install
 cd ..
+
+ldconfig
 ```
 
 Deploy example on Debian with Supervisor
