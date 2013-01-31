@@ -94,8 +94,9 @@ vim /etc/supervisord.conf
 At the end of the file, add:
 ```
 [program:mfs]
-command=/opt/media-folder-sync/vpython-mfs/bin/python /opt/media-folder-sync/media-folder-sync/media_folder_sync.py /var/www/drupal7_sites/_radios/files/ -d /opt/media-folder-sync/database.db
+command=/opt/media-folder-sync/vpython-mfs/bin/python /opt/media-folder-sync/media-folder-sync/media_folder_sync.py /var/www/files/ -d /opt/media-folder-sync/database.db
 ```
+Replace the path /var/www/files/ with the folder you want to monitor with MFS.
 Now, create links for supervisor executables:
 ```
 ln -s `pwd`/vpython-mfs/bin/supervisorctl /usr/local/bin/
