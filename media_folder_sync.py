@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 
 import os
+import re
 from pyinotify import WatchManager, IN_DELETE, IN_CREATE, IN_CLOSE_WRITE, ProcessEvent, Notifier
-import sys
-import subprocess
-import tempfile
 from optparse import OptionParser
 from itertools import chain
 from dbdict import dbdict
 from settings import *
+from external_apps import Hook, ffmpeg
+import lock
+import threading
+from time import sleep
+
+hook = Hook()
 
 # Store m_time of all files to check if the file has been updated by the user
 # or by the system itself
@@ -21,6 +25,15 @@ def remove_related_files(filepath):
     """
     path, extension = os.path.splitext(filepath)
     filetype = get_type(extension)
+    if not filetype:
+        filetype=verify_input(filepath)
+    
+    print "deleting:", filepath
+    if filechecks.has_key(filepath):
+        del filechecks[filepath]
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
     for ext in filetype:
         filepath=path+ext
         print "deleting:", filepath
@@ -28,21 +41,6 @@ def remove_related_files(filepath):
             del filechecks[filepath]
         if os.path.exists(filepath):
             os.remove(filepath)
-
-def ffmpeg(file_in, file_out, codecs):
-    """ Calls ffmeg to convert file_in to file_out using codecs
-    """
-    print "converting: %s -> %s" %(file_in,file_out)
-    codecs = " ".join(["-%s %s" %(t,c) for t,c in codecs.items()])
-    command = " ".join([ffmpeg_exec,"-y","-i '%s'" %file_in,codecs,"'%s'"%file_out])
-    with tempfile.TemporaryFile() as tmp:
-        exit_code = subprocess.call(command, stderr=tmp, shell=True)
-        if exit_code !=0:
-            tmp.seek(0)
-            error_output = tmp.read()
-            print "Error while converting."
-            return error_output
-    print "conversion done."
     
 def get_type(extension):
     """ Return the group of filetypes, defined globally, that extension is part of.
@@ -51,17 +49,50 @@ def get_type(extension):
         if extension in filetype.keys():
             return filetype
 
+def verify_input(filepath):
+    """ Check if filepath is an input file
+    """
+    path, extension = os.path.splitext(filepath)
+    
+    for regext, ext in input_formats.items():
+        if not re.match(regext,filepath):
+            continue
+        filetype = get_type(ext)
+        if not filetype:
+            continue
+        return filetype
+
+def start_thread(filepath):
+    if filepath.endswith('.error') or filepath.endswith('.lock'):
+        return
+    
+    lockfile = lock.get_lock(filepath)
+    
+    if not lockfile:
+        return
+    
+    while threading.activeCount() > number_of_threads:
+        print 'too many threads, waiting for one to finish.'
+        sleep(1)
+    t=threading.Thread(target=verify, args=(filepath,))
+    t.start()
+
+@lock.release_lock_decorator
 def verify(filepath):
     """ Check if all the extensions has been created for filepath extension
         group, and creates if doesn't.
     """
     path, extension = os.path.splitext(filepath)
+
     filetype = get_type(extension)
     
     if not filetype:
-        return
+        filetype=verify_input(filepath)
+        if not filetype:
+            return
     
     filecheck = filechecks.get(filepath,None)
+    
     if  filecheck == check(filepath):
         return
     
@@ -71,12 +102,14 @@ def verify(filepath):
         print "New file detected:",filepath
     
     filechecks[filepath] = check(filepath)
-    
+    filenames = [filepath]
     for ext,codecs in filetype.items():
         new_file = path+ext
         
         if new_file == filepath:
             continue
+        
+        filenames.append(new_file)
         
         if filecheck == None and os.path.exists(new_file):
             print 'A unknown file detected: %s. Assuming it is correct.' %new_file
@@ -91,6 +124,10 @@ def verify(filepath):
             continue
         
         filechecks[new_file] = check(new_file)
+        hook.execute('hook_each', new_file)
+        
+    hook.execute('hook_all', *filenames)
+
 
 def get_all_files(folder):
     """ Returns a generator that lists all files from a specific folder,
@@ -104,15 +141,22 @@ def verify_all(folders):
     """ Calls verify for all files found on all specified folders,
         and remove all non existant files.
     """
+    
+    #release all locks
+    for filepath in chain(*map(get_all_files,folders)):
+        if lock.release_lock(filepath):
+            lockname = lock.get_lockfilename(filepath)
+            print 'Stalled lock file "%s", removed.' %lockname
+    
     # Add/Update all files
     for filepath in chain(*map(get_all_files,folders)):
-        verify(filepath)
+        start_thread(filepath)
     
     #Remove non existant files
     for filepath in filechecks:
         if not os.path.exists(filepath):
             remove_related_files(filepath)
-
+    
 class Process(ProcessEvent):
     """ Process class that is connected to WatchManager.
         Everytime an event happens the specific method
@@ -137,7 +181,7 @@ class Process(ProcessEvent):
             any conversion starts
         """
         filepath = os.path.join(event.path, event.name)
-        verify(filepath)
+        start_thread(filepath)
     
     def process_IN_DELETE(self, event):
         """ File or directory has been deleted.
@@ -146,7 +190,7 @@ class Process(ProcessEvent):
         filepath = os.path.join(event.path, event.name)
         if filechecks.has_key(filepath):
             remove_related_files(filepath)
-
+        
 def monitor_loop(folders):
     """ Main loop, create everything needed for the notification
         and waits for a notification. Loop again when notification
@@ -177,7 +221,11 @@ def command_line_args():
         action="store_false", help="Does not start folder monitor")
     parser.add_option("-d", "--database", dest="database", default=os.path.expanduser('~/.media-folder-sync.db'),
         help="Change SQLite database file")
-        
+    parser.add_option("-a", "--after_conversion", dest="hook_each", default=None,
+        help="Script to be executed after each successful conversion. Converted file will be the argument")    
+    parser.add_option("-A", "--after_all_conversions", dest="hook_all", default=None,
+        help="Script to be executed after all conversions for a new/modified file is done. The original filename, and all group filenames will be passed as argument.")    
+    
     return parser.parse_args()
 
 def start():
@@ -186,6 +234,11 @@ def start():
     global filechecks
     options, folders = command_line_args()
     filechecks = dbdict(options.database)
+    if options.hook_all:
+        hook.add('hook_all',options.hook_all)
+    
+    if options.hook_each:
+        hook.add('hook_each',options.hook_each)
     
     if not folders:
         folders.append(os.getcwd())

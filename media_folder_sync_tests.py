@@ -5,6 +5,7 @@ except ImportError:
     import unittest
     TIMEWAIT=0.1
 import media_folder_sync as mfs
+import external_apps as extaps
 import tempfile
 import os, stat
 import shutil
@@ -13,7 +14,7 @@ class db_dict_test(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.mkdtemp()
         self.create_db = lambda : mfs.dbdict(os.path.join(self.directory,'db.db'))
-        self.close_db = lambda db: db.con.close()
+        self.close_db = lambda db: True #db.close()
     
     def tearDown(self):
         shutil.rmtree(self.directory, ignore_errors=True)
@@ -110,6 +111,7 @@ class mfs_test(unittest.TestCase):
         os.chmod(ffmpeg_exec, stat.S_IXUSR | stat.S_IRUSR | stat.S_IWUSR)
         self.old_ffmpeg = mfs.ffmpeg_exec
         mfs.ffmpeg_exec = ffmpeg_exec
+        extaps.ffmpeg_exec = ffmpeg_exec
         
     def tearDown(self):
         #shutil.rmtree(self.directory, ignore_errors=True)

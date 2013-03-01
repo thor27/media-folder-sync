@@ -9,30 +9,43 @@ class dbdict(UserDict.DictMixin):
     '''
     def __init__(self,db_filename):
         self.db_filename = db_filename
+        
+    def db_connect(self):
         if not os.path.isfile(self.db_filename):
-            self.con = sqlite.connect(self.db_filename)
-            self.con.execute("create table data (key PRIMARY KEY,value)")
+            con = sqlite.connect(self.db_filename)
+            con.execute("create table data (key PRIMARY KEY,value)")
         else:
-            self.con = sqlite.connect(self.db_filename)
-   
+            con = sqlite.connect(self.db_filename)
+        return con
+        
     def __getitem__(self, key):
-        row = self.con.execute("select value from data where key=?",(key,)).fetchone()
+        con = self.db_connect()
+        row = con.execute("select value from data where key=?",(key,)).fetchone()
+        con.close()
         if not row: raise KeyError
         return row[0]
    
     def __setitem__(self, key, item):
-        if self.con.execute("select key from data where key=?",(key,)).fetchone():
-            self.con.execute("update data set value=? where key=?",(item,key))
+        con = self.db_connect()
+        if con.execute("select key from data where key=?",(key,)).fetchone():
+            con.execute("update data set value=? where key=?",(item,key))
         else:
-            self.con.execute("insert into data (key,value) values (?,?)",(key, item))
-        self.con.commit()
+            con.execute("insert into data (key,value) values (?,?)",(key, item))
+        con.commit()
+        con.close()
               
     def __delitem__(self, key):
-        if self.con.execute("select key from data where key=?",(key,)).fetchone():
-            self.con.execute("delete from data where key=?",(key,))
-            self.con.commit()
+        con = self.db_connect()
+        if con.execute("select key from data where key=?",(key,)).fetchone():
+            con.execute("delete from data where key=?",(key,))
+            con.commit()
+            con.close()
         else:
-             raise KeyError
+            con.close()
+            raise KeyError
             
     def keys(self):
-        return [row[0] for row in self.con.execute("select key from data").fetchall()]
+        con = self.db_connect()
+        ret=[row[0] for row in con.execute("select key from data").fetchall()]
+        con.close()
+        return ret
