@@ -38,6 +38,6 @@ def ffmpeg(file_in, file_out, codecs):
             tmp.seek(0)
             error_output = tmp.read()
             print "Error while converting."
-            return error_output
+            return command + '\n\n' + error_output
         
     print "conversion done."

@@ -2,8 +2,28 @@
 # and codecs that needs to exist for this kind of file
 filetypes = [
     {
-        '.mp4': {'vcodec':'mpeg4','acodec':'libmp3lame'},
-        '.webm': {'vcodec':'libvpx','acodec':'libvorbis'},
+        '.mp4': {
+            'vcodec': 'libx264',
+            'acodec':'libfaac',
+            'vprofile': 'high', 
+            'b:v': '500k', 
+            'maxrate': '500k', 
+            'bufsize': '1000k', 
+            'vf': 'scale="trunc(oh*a/2)*2":480',
+            'threads': '0',
+        },
+        '.webm': {
+            'vcodec':'libvpx',
+            'acodec':'libvorbis',
+            'cpu-used':'0',
+            'b:v':'500k',
+            'qmin':'10',
+            'qmax':'42',
+            'maxrate':'500k',
+            'bufsize':'1000k',
+            'threads':'4',
+            'vf':'scale=-1:480',
+        },
     },
     {
         '.ogg': {'acodec':'libvorbis'},

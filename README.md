@@ -57,6 +57,14 @@ make
 make install
 cd ..
 
+wget http://downloads.sourceforge.net/opencore-amr/fdk-aac-0.1.1.tar.gz
+tar xzvf fdk-aac-0.1.1.tar.gz
+cd fdk-aac-0.1.1
+./configure
+make
+make install
+cd ..
+
 wget http://webm.googlecode.com/files/libvpx-v0.9.7-p1.tar.bz2
 tar -xjf libvpx-v0.9.7-p1.tar.bz2
 cd libvpx-v0.9.7-p1
@@ -68,7 +76,7 @@ ldconfig
 
 git clone git://source.ffmpeg.org/ffmpeg
 cd ffmpeg
-./configure --enable-gpl --enable-version3 --enable-nonfree --enable-postproc --enable-libfaac --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libxvid --enable-x11grab
+./configure --enable-gpl --enable-version3 --enable-nonfree --enable-postproc --enable-libfaac --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libxvid --enable-x11grab --enable-libfdk-aac
 make
 make install
 cd ..

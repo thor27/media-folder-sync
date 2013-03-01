@@ -43,7 +43,8 @@ def remove_related_files(filepath):
             os.remove(filepath)
     
 def get_type(extension):
-    """ Return the group of filetypes, defined globally, that extension is part of.
+    """ Return the group of filetypes, defined globally, that extension is 
+        part of.
     """
     for filetype in filetypes:
         if extension in filetype.keys():
@@ -66,14 +67,13 @@ def start_thread(filepath):
     if filepath.endswith('.error') or filepath.endswith('.lock'):
         return
     
-    lockfile = lock.get_lock(filepath)
-    
-    if not lockfile:
+    if not lock.get_lock(filepath):
         return
     
     while threading.activeCount() > number_of_threads:
         print 'too many threads, waiting for one to finish.'
         sleep(1)
+        
     t=threading.Thread(target=verify, args=(filepath,))
     t.start()
 
@@ -112,7 +112,7 @@ def verify(filepath):
         filenames.append(new_file)
         
         if filecheck == None and os.path.exists(new_file):
-            print 'A unknown file detected: %s. Assuming it is correct.' %new_file
+            print 'Unknown file detected: %s. Assuming it is correct.' %new_file
             filechecks[new_file] = check(new_file)
             continue
         
