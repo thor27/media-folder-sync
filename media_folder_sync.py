@@ -24,19 +24,20 @@ def remove_related_files(filepath):
         extension) from filesystem and filechecks
     """
     path, extension = os.path.splitext(filepath)
-    filetype = get_type(extension)
-    if not filetype:
-        filetype=verify_input(filepath)
     
-    print "deleting:", filepath
+    print "removing:", filepath
     if filechecks.has_key(filepath):
         del filechecks[filepath]
     if os.path.exists(filepath):
         os.remove(filepath)
 
+    filetype = get_type(extension)
+    if not filetype:
+        return
+
     for ext in filetype:
         filepath=path+ext
-        print "deleting:", filepath
+        print "removing:", filepath
         if filechecks.has_key(filepath):
             del filechecks[filepath]
         if os.path.exists(filepath):
