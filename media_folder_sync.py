@@ -7,7 +7,7 @@ from optparse import OptionParser
 from itertools import chain
 from dbdict import dbdict
 from settings import *
-from external_apps import Hook, ffmpeg
+from external_apps import Hook, ffmpeg, ffmpeg_thumb
 import lock
 import threading
 from time import sleep
@@ -64,8 +64,14 @@ def verify_input(filepath):
             continue
         return filetype
 
+def should_not_convert(filepath):
+    ext = os.path.splitext(filepath)[1]
+    if ext in ignored_extensions:
+        return True
+    return False
+    
 def start_thread(filepath):
-    if filepath.endswith('.error') or filepath.endswith('.lock'):
+    if should_not_convert(filepath):
         return
     
     if not lock.get_lock(filepath):
@@ -104,6 +110,11 @@ def verify(filepath):
     
     filechecks[filepath] = check(filepath)
     filenames = [filepath]
+    
+    if thumb_generation:
+        ffmpeg_thumb(filepath, path+'.jpg')
+        hook.execute('hook_each', path+'.jpg')
+    
     for ext,codecs in filetype.items():
         new_file = path+ext
         

@@ -20,7 +20,15 @@ class Hook(object):
             subprocess.call(proc)
         except Exception, e:
             warnings.warn(traceback.format_exc(),RuntimeWarning)
-        
+
+def ffmpeg_thumb(file_in, file_out):
+    codecs = {
+        'ss': '00:00:11.01',
+        'f': 'image2',
+        'vframes': '1',
+    }
+    ffmpeg(file_in, file_out, codecs)
+    
 
 def ffmpeg(file_in, file_out, codecs):
     """ Calls ffmeg to convert file_in to file_out using codecs

@@ -41,8 +41,21 @@ input_formats = {
   '.*': '.mp4'
 }
 
+# Extensions to be ignored by the conversion system
+# .error .lock SHOULD NOT be removed from this list, or bad things
+# can happend! .jpg cannot be removed also if thumb generation is enabled
+
+ignored_extensions = (
+    '.error',
+    '.lock',
+    '.jpg'
+)
+    
 # FFmpeg executable name or path
 ffmpeg_exec = 'ffmpeg'
 
 #the max number of threads
 number_of_threads = 5
+
+#enable thumb generation
+thumb_generation = True
