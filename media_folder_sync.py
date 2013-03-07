@@ -93,8 +93,11 @@ def verify(filepath):
 
     filetype = get_type(extension)
     
-    if not filetype:
+    if filetype:
+        input_only = False
+    else:
         filetype=verify_input(filepath)
+        input_only=True
         if not filetype:
             return
     
@@ -112,8 +115,13 @@ def verify(filepath):
     filenames = [filepath]
     
     if thumb_generation:
-        ffmpeg_thumb(filepath, path+'.jpg')
-        hook.execute('hook_each', path+'.jpg')
+        thumb_file = path+'.jpg'
+        ffmpeg_thumb(filepath, thumb_file)
+        hook.execute('hook_each', thumb_file)
+        filenames.append(thumb_file)
+    
+    if not input_only:
+        hook.execute('hook_each', filepath)
     
     for ext,codecs in filetype.items():
         new_file = path+ext
